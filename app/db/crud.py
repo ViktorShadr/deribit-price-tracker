@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from decimal import Decimal
 from typing import Mapping
 
 from sqlalchemy.orm import Session
@@ -7,12 +8,12 @@ from sqlalchemy.orm import Session
 from app.db.models import Price
 
 
-def save_price(session: Session, ticker: str, price: float, ts: int) -> None:
+def save_price(session: Session, ticker: str, price: Decimal, ts: int) -> None:
     row = Price(ticker=ticker, price=price, ts=ts)
     session.add(row)
 
 
-def save_prices(session: Session, prices: Mapping[str, float], ts: int) -> int:
+def save_prices(session: Session, prices: Mapping[str, Decimal], ts: int) -> int:
     """
     Сохраняет пачку цен за один timestamp.
     Возвращает количество добавленных строк.

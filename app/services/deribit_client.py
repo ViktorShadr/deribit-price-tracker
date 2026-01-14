@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from decimal import Decimal
 from typing import Iterable
 
 import httpx
@@ -15,7 +16,7 @@ class DeribitClient:
     base_url: str = "https://www.deribit.com/api/v2"
     timeout_s: float = 10.0
 
-    def get_index_price(self, index_name: str) -> float:
+    def get_index_price(self, index_name: str) -> Decimal:
         """
         Возвращает текущую index price для index_name (например, btc_usd / eth_usd).
         Deribit public endpoints не требуют авторизации.
@@ -31,7 +32,6 @@ class DeribitClient:
 
         data = resp.json()
 
-        # Deribit API может вернуть {"error": {...}} вместо result
         if "error" in data and data["error"]:
             raise DeribitError(f"Deribit error: {data['error']}")
 
@@ -39,9 +39,9 @@ class DeribitClient:
         if result is None or "index_price" not in result:
             raise DeribitError(f"Unexpected response format: {data}")
 
-        return float(result["index_price"])
+        return Decimal(str(result["index_price"]))
 
-    def get_index_prices(self, index_names: Iterable[str]) -> dict[str, float]:
+    def get_index_prices(self, index_names: Iterable[str]) -> dict[str, Decimal]:
         """
         Удобный метод: получить несколько индексов подряд.
         (Параллелить тут не нужно — 2 запроса/мин.)
