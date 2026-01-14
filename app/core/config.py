@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from dataclasses import dataclass
 from functools import lru_cache
@@ -7,8 +8,14 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-
 BASE_DIR = Path(__file__).resolve().parents[2]
+
+# Настройка логирования
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -42,6 +49,8 @@ def get_settings() -> Settings:
     tickers = _parse_csv(tickers_raw)
     if not tickers:
         raise RuntimeError("TICKERS is empty. Example: TICKERS=btc_usd,eth_usd")
+
+    logger.info(f"Configuration loaded. Tickers: {tickers}")
 
     return Settings(
         database_url=database_url,

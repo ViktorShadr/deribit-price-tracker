@@ -1,9 +1,12 @@
 from decimal import Decimal
 
-from sqlalchemy import BigInteger, Index, Numeric, String
+from sqlalchemy import BigInteger, CheckConstraint, Index, Numeric, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db.base import Base
+
+# Допустимые тикеры для валидации
+VALID_TICKERS = {"btc_usd", "eth_usd"}
 
 
 class Price(Base):
@@ -20,4 +23,11 @@ class Price(Base):
 
     __table_args__ = (
         Index("ix_prices_ticker_ts", "ticker", "ts"),
+        # Уникальный индекс для предотвращения дубликатов
+        Index("uq_prices_ticker_ts", "ticker", "ts", unique=True),
+        # Валидация тикеров на уровне БД
+        CheckConstraint(
+            f"ticker IN ({', '.join(repr(t) for t in VALID_TICKERS)})",
+            name="check_valid_ticker"
+        ),
     )
