@@ -29,7 +29,6 @@ def _parse_csv(value: str) -> tuple[str, ...]:
 def get_settings() -> Settings:
     """
     Единая точка чтения конфигурации.
-    Важно: никаких побочных эффектов на уровне импорта модуля.
     """
     load_dotenv(BASE_DIR / ".env")
 
