@@ -18,7 +18,7 @@ class DeribitClient:
     def get_index_price(self, index_name: str) -> float:
         """
         Возвращает текущую index price для index_name (например, btc_usd / eth_usd).
-        Deribit public endpoints не требуют авторизации. :contentReference[oaicite:0]{index=0}
+        Deribit public endpoints не требуют авторизации.
         """
         url = f"{self.base_url}/public/get_index_price"
         params = {"index_name": index_name}

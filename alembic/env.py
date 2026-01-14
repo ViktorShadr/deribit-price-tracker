@@ -1,15 +1,26 @@
+import os
 from logging.config import fileConfig
+from pathlib import Path
 
 from alembic import context
+from dotenv import load_dotenv
 from sqlalchemy import engine_from_config
 from sqlalchemy import pool
 
 import app.db.models  # noqa: F401
 from app.db.base import Base
 
+BASE_DIR = Path(__file__).resolve().parents[1]  # корень проекта (рядом с alembic.ini)
+load_dotenv(BASE_DIR / ".env")
+
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
+db_url = os.getenv("DATABASE_URL")
+if not db_url:
+    raise RuntimeError("DATABASE_URL is not set. Put it into .env")
+
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
