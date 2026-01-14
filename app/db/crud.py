@@ -4,8 +4,6 @@ from typing import Mapping
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Price
-
 
 def save_price(session: Session, ticker: str, price: float, ts: int) -> None:
     row = Price(ticker=ticker, price=price, ts=ts)
@@ -21,3 +19,34 @@ def save_prices(session: Session, prices: Mapping[str, float], ts: int) -> int:
         save_price(session, ticker=ticker, price=price, ts=ts)
 
     return len(prices)
+
+
+from sqlalchemy.orm import Session
+from app.db.models import Price
+
+
+def get_prices(db: Session, ticker: str) -> list[type[Price]]:
+    return (
+        db.query(Price)
+        .filter(Price.ticker == ticker)
+        .order_by(Price.ts.asc())
+        .all()
+    )
+
+
+def get_latest_price(db: Session, ticker: str) -> Price | None:
+    return (
+        db.query(Price)
+        .filter(Price.ticker == ticker)
+        .order_by(Price.ts.desc())
+        .first()
+    )
+
+
+def get_prices_by_date(db: Session, ticker: str, from_ts: int, to_ts: int) -> list[type[Price]]:
+    return (
+        db.query(Price)
+        .filter(Price.ticker == ticker, Price.ts >= from_ts, Price.ts <= to_ts)
+        .order_by(Price.ts.asc())
+        .all()
+    )
