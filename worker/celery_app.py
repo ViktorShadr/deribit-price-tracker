@@ -1,10 +1,13 @@
 from celery import Celery
-from app.core.config import CELERY_BROKER_URL, CELERY_BACKEND_URL
+
+from app.core.config import get_settings
+
+settings = get_settings()
 
 celery_app = Celery(
     "deribit_price_tracker",
-    broker=CELERY_BROKER_URL,
-    backend=CELERY_BACKEND_URL,
+    broker=settings.celery_broker_url,
+    backend=settings.celery_backend_url,
     include=["worker.tasks"],
 )
 

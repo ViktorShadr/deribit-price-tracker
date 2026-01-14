@@ -1,19 +1,27 @@
 import time
-from decimal import Decimal
 
-from worker.celery_app import celery_app
-from app.services.deribit_client import DeribitClient
-from app.db.session import SessionLocal
+from app.core.config import get_settings
 from app.db.crud import save_prices
+from app.db.deps import SessionLocal
+from app.services.deribit_client import DeribitClient, DeribitError
+from worker.celery_app import celery_app
 
-TICKERS = ["btc_usd", "eth_usd"]
+settings = get_settings()
 
-@celery_app.task(name="worker.tasks.fetch_and_store_prices")
+
+@celery_app.task(
+    name="worker.tasks.fetch_and_store_prices",
+    autoretry_for=(DeribitError,),
+    retry_kwargs={"max_retries": 5},
+    retry_backoff=True,
+    retry_jitter=True,
+)
 def fetch_and_store_prices():
     ts = int(time.time())
-    prices = DeribitClient().get_index_prices(TICKERS)
 
-    # пишем в БД
+    client = DeribitClient(base_url=settings.deribit_base_url)
+    prices = client.get_index_prices(settings.tickers)
+
     session = SessionLocal()
     try:
         save_prices(session, prices, ts)

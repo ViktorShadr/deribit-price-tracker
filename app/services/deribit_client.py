@@ -12,7 +12,7 @@ class DeribitError(RuntimeError):
 
 @dataclass(frozen=True)
 class DeribitClient:
-    base_url: str = "https://test.deribit.com/api/v2"
+    base_url: str = "https://www.deribit.com/api/v2"
     timeout_s: float = 10.0
 
     def get_index_price(self, index_name: str) -> float:
