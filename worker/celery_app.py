@@ -1,3 +1,7 @@
+"""
+   Celery application для периодической загрузки цен индексов.
+"""
+
 from celery import Celery
 
 from app.core.config import get_settings

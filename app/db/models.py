@@ -7,6 +7,8 @@ from app.db.base import Base
 
 
 class Price(Base):
+    """ORM-модель сохранённых цен (index price) по тикерам Deribit."""
+
     __tablename__ = "prices"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)

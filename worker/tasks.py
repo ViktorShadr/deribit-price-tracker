@@ -17,6 +17,14 @@ settings = get_settings()
     retry_jitter=True,
 )
 def fetch_and_store_prices():
+    """
+        Celery task: раз в минуту получает index price по тикерам и сохраняет в БД.
+
+        Сохраняет:
+          - ticker
+          - price
+          - ts (UNIX timestamp, seconds)
+    """
     ts = int(time.time())
 
     client = DeribitClient(base_url=settings.deribit_base_url)
