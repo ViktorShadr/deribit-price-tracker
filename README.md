@@ -1,93 +1,388 @@
-# deribit-price-tracker
+# Deribit Price Tracker
 
+Сервис для отслеживания цен криптовалют BTC и ETH с биржи Deribit. Собирает данные каждую минуту и предоставляет REST
+API для доступа к ним.
 
+## Функциональность
 
-## Getting started
+- **Автоматический сбор цен**: Каждую минуту получает index цены для BTC/USD и ETH/USD с Deribit API
+- **Хранение в PostgreSQL**: Надежное сохранение данных с уникальными индексами
+- **REST API**: Полнофункциональный API для получения исторических данных
+- **Контейнеризация**: Полностью развертывается через Docker Compose
+- **Обработка ошибок**: Graceful retry механизмы и логирование
 
-To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+## API Эндпоинты
 
-Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+### Получение всех цен по тикеру
 
-## Add your files
+```http
+GET /prices?ticker=btc_usd
+GET /prices?ticker=eth_usd
+```
 
-* [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
-* [Add files using the command line](https://docs.gitlab.com/topics/git/add_files/#add-files-to-a-git-repository) or push an existing Git repository with the following command:
+### Получение последней цены
+
+```http
+GET /prices/latest?ticker=btc_usd
+GET /prices/latest?ticker=eth_usd
+```
+
+### Получение цен по диапазону дат
+
+```http
+GET /prices/by-date?ticker=btc_usd&from_ts=1700000000&to_ts=1700000600
+```
+
+## Развертывание (Docker)
+
+### Требования
+
+- Docker и Docker Compose
+- Git
+
+### Шаги для развертывания
+
+1. **Клонирование репозитория**
+
+```bash
+git clone https://gitlab.com/ViktorShadr/deribit-price-tracker.git
+cd deribit-price-tracker
+```
+
+2. **Настройка переменных окружения**
+
+```bash
+cp .env.example .env
+# Отредактируйте .env при необходимости
+```
+
+3. **Запуск сервисов**
+
+```bash
+docker-compose up -d
+```
+
+В Docker Compose запускаются API, PostgreSQL, Redis, Celery worker и Celery beat
+для периодического сбора данных.
+
+4. **Проверка работоспособности**
+
+```bash
+# Проверка API
+curl http://localhost:8000/health
+
+# Проверка получения цен
+curl "http://localhost:8000/prices/latest?ticker=btc_usd"
+```
+
+---
+
+## Локальный запуск (API и Celery без Docker)
+
+В данном режиме приложение (API и Celery) запускается локально,
+а инфраструктурные сервисы (PostgreSQL и Redis) — в Docker.
+
+### Требования
+
+- Python 3.12
+- Docker и Docker Compose (для PostgreSQL и Redis)
+
+### Шаги
+
+1. **Подготовка окружения**
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+2. **Настройка переменных окружения**
+
+```bash
+cp .env.example .env
+# Отредактируйте .env при необходимости
+```
+
+3. **Запуск инфраструктуры (PostgreSQL и Redis)**
+
+```bash
+docker-compose up -d db redis
+```
+
+4. **Применение миграций**
+
+```bash
+alembic upgrade head
+```
+
+5. **Запуск API**
+
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
+```
+
+6. **Запуск Celery worker и beat (в отдельных терминалах)**
+
+**Linux / macOS:**
+
+```bash
+celery -A worker.celery_app:celery_app worker --loglevel=info
+```
+
+**Windows:**
+
+```bash
+celery -A worker.celery_app:celery_app worker --loglevel=info --pool=solo
+```
+
+```bash
+celery -A worker.celery_app:celery_app beat --loglevel=info
+```
+
+### Переменные окружения
+
+| Переменная           | Значение по умолчанию          | Описание                        |
+|----------------------|--------------------------------|---------------------------------|
+| `POSTGRES_PASSWORD`  | change_me                      | Пароль PostgreSQL               |
+| `DATABASE_URL`       | -                              | URL подключения к БД            |
+| `CELERY_BROKER_URL`  | redis://localhost:6379/0       | Redis брокер для Celery         |
+| `CELERY_BACKEND_URL` | redis://localhost:6379/1       | Redis backend для результатов   |
+| `DERIBIT_BASE_URL`   | https://www.deribit.com/api/v2 | URL Deribit API                 |
+| `TICKERS`            | btc_usd,eth_usd                | Список тикеров для отслеживания |
+
+## Design Decisions
+
+### 1. Выбор httpx вместо aiohttp
+
+**Решение**: Использован синхронный httpx клиент вместо асинхронного aiohttp
+
+**Обоснование**:
+
+- Celery задачи выполняются в синхронном контексте
+- httpx предоставляет современный API и лучшую производительность для синхронных запросов
+- Упрощает код и отладку в контексте Celery worker
+- httpx является преемником requests и рекомендуется для новых проектов
+
+### 2. PostgreSQL с уникальными индексами
+
+**Решение**: PostgreSQL с уникальным индексом (ticker, ts)
+
+**Обоснование**:
+
+- Гарантирует целостность данных на уровне БД
+- Предотвращает дубликаты при одновременных запросах
+- Поддерживает сложные запросы и агрегацию
+- Индекс (ticker, ts) оптимизирует основные запросы API
+
+### 3. Трехслойная архитектура (Clean Architecture)
+
+**Решение**: API → Service → CRUD → Database
+
+**Обоснование**:
+
+- **Разделение ответственности**: Каждый слой имеет четкую зону ответственности
+- **Тестируемость**: Легко мокать зависимости на каждом уровне
+- **Масштабируемость**: Простое добавление новой бизнес-логики
+- **Поддерживаемость**: Изменения в одном слое не затрагивают другие
+- **Отсутствие глобальных переменных**: Все зависимости передаются через конструкторы
+
+### 4. Валидация тикеров на нескольких уровнях
+
+**Решение**: Валидация в Pydantic, SQLAlchemy Check Constraint
+
+**Обоснование**:
+
+- Pydantic обеспечивает валидацию на входе API
+- Check Constraint в БД гарантирует целостность данных
+- Enum в схемах предоставляет автодокументацию API
+- Многоуровневая защита от некорректных данных
+
+### 5. ООП подход с dataclass
+
+**Решение**: Использование frozen dataclass для сервисов и клиентов
+
+**Обоснование**:
+
+- **Инкапсуляция**: Данные и методы объединены в одном объекте
+- **Неизменяемость**: Frozen dataclass предотвращает случайные изменения
+- **Чистый код**: Явное объявление зависимостей в конструкторе
+- **Типизация**: Автоматическая генерация __init__ с типами
+
+### 6. Контекстный менеджер для БД сессий
+
+**Решение**: `get_db_context()` для Celery задач
+
+**Обоснование**:
+
+- Гарантирует правильное закрытие сессий
+- Автоматический rollback при ошибках
+- Избегает глобальных зависимостей
+- Улучшает тестируемость кода
+
+### 7. Graceful обработка ошибок в Celery
+
+**Решение**: Автоматический retry с exponential backoff
+
+**Обоснование**:
+
+- Внешние API могут быть временно недоступны
+- Exponential backoff снижает нагрузку на сервис
+- Детальное логирование для мониторинга
+- Изолирует ошибки от основного потока
+
+### 8. Нейминг и структура проекта
+
+**Решение**: Четкая структура с говорящими именами
+
+**Обоснование**:
+
+- **Самодокументируемый код**: Имена функций и переменных объясняют назначение
+- **Единый стиль**: Следование PEP 8 и общепринятым конвенциям
+- **Логическая группировка**: Связанный код находится в одном модуле
+- **Предсказуемость**: Структура проекта соответствует лучшим практикам FastAPI
+
+## Структура проекта
 
 ```
-cd existing_repo
-git remote add origin https://gitlab.com/ViktorShadr/deribit-price-tracker.git
-git branch -M main
-git push -uf origin main
+deribit-price-tracker/
+├── app/
+│   ├── api/           # FastAPI роуты
+│   │   └── routes.py  # Основные эндпоинты API
+│   ├── core/          # Конфигурация
+│   │   └── config.py  # Настройки и переменные окружения
+│   ├── db/            # Модели, CRUD, зависимости
+│   │   ├── base.py    # SQLAlchemy Base
+│   │   ├── crud.py    # CRUD операции
+│   │   ├── deps.py    # Зависимости для БД
+│   │   └── models.py  # SQLAlchemy модели
+│   ├── schemas/       # Pydantic модели
+│   │   └── price.py   # Схемы цен и валидация
+│   ├── services/      # Бизнес-логика
+│   │   ├── deribit_client.py  # Клиент Deribit API
+│   │   └── prices_service.py  # Сервис работы с ценами
+│   └── main.py        # FastAPI приложение
+├── worker/            # Celery задачи
+│   ├── celery_app.py  # Настройка Celery
+│   └── tasks.py       # Задачи сбора данных
+├── alembic/           # Миграции БД
+│   └── versions/      # Версии миграций
+├── tests/             # Unit тесты
+│   └── test_api.py    # Тесты API эндпоинтов
+├── docker-compose.yml # Оркестрация контейнеров
+├── Dockerfile         # Сборка приложения
+├── requirements.txt   # Зависимости Python
+├── .env.example      # Пример переменных окружения
+└── README.md         # Документация
 ```
 
-## Integrate with your tools
+## Технологический стек
 
-* [Set up project integrations](https://gitlab.com/ViktorShadr/deribit-price-tracker/-/settings/integrations)
+- **Backend**: FastAPI, Python 3.12
+- **База данных**: PostgreSQL 16
+- **ORM**: SQLAlchemy 2.0
+- **Миграции**: Alembic
+- **Очередь задач**: Celery + Redis
+- **HTTP клиент**: httpx
+- **Контейнеризация**: Docker + Docker Compose
+- **Тестирование**: pytest, httpx
+- **Валидация**: Pydantic
 
-## Collaborate with your team
+## Тестирование
 
-* [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
-* [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
-* [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
-* [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
-* [Set auto-merge](https://docs.gitlab.com/user/project/merge_requests/auto_merge/)
+### Запуск тестов
 
-## Test and Deploy
+```bash
+# Запуск всех тестов
+python -m pytest tests/
 
-Use the built-in continuous integration in GitLab.
+# Запуск с покрытием
+python -m pytest tests/ --cov=app
 
-* [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/)
-* [Analyze your code for known vulnerabilities with Static Application Security Testing (SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
-* [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
-* [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
-* [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+# Запуск конкретного теста
+python -m pytest tests/test_api.py::ApiTests::test_health_ok
+```
 
-***
+### Примеры тестов
 
-# Editing this README
+```python
+# Тест получения последней цены
+async def test_latest_returns_200_when_data_exists(self):
+    r = await self.client.get("/prices/latest", params={"ticker": "btc_usd"})
+    self.assertEqual(r.status_code, 200)
 
-When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thanks to [makeareadme.com](https://www.makeareadme.com/) for this template.
 
-## Suggestions for a good README
+# Тест валидации обязательных параметров
+async def test_prices_requires_ticker_returns_422(self):
+    r = await self.client.get("/prices")
+    self.assertEqual(r.status_code, 422)
+```
 
-Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+## Мониторинг и логирование
 
-## Name
-Choose a self-explaining name for your project.
+### Логи
 
-## Description
-Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+- Application logs: stdout контейнеров
+- Celery worker logs: детальные логи задач
+- Database logs: PostgreSQL логи
 
-## Badges
-On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+### Health checks
 
-## Visuals
-Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+- API: `GET /health`
+- Database: PostgreSQL health check
+- Redis: Redis ping check
 
-## Installation
-Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+## Производительность
 
-## Usage
-Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+### Оптимизации
 
-## Support
-Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+- Индексы БД для основных запросов
+- Connection pooling для PostgreSQL
+- Эффективная обработка дубликатов
+- Batch операции в Celery задачах
 
-## Roadmap
-If you have ideas for releases in the future, it is a good idea to list them in the README.
+### Метрики
 
-## Contributing
-State if you are open to contributions and what your requirements are for accepting them.
+- Время ответа API: < 50ms
+- Частота сбора данных: 1 минута
+- Размер хранилища: ~1MB/год на тикер
 
-For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+## Траблшутинг
 
-You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+### Частые проблемы
 
-## Authors and acknowledgment
-Show your appreciation to those who have contributed to the project.
+1. **API недоступен**
 
-## License
-For open source projects, say how it is licensed.
+```bash
+# Проверить статус контейнеров
+docker-compose ps
 
-## Project status
-If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.
+# Проверить логи
+docker-compose logs app
+```
+
+2. **Нет данных в БД**
+
+```bash
+# Проверить логи worker
+docker-compose logs worker
+
+# Проверить статус Celery задач
+docker-compose exec worker celery -A worker.celery_app:get_celery_app inspect active
+```
+
+3. **Проблемы с БД**
+
+```bash
+# Пересоздать БД с миграциями
+docker-compose down -v
+docker-compose up -d
+```
+
+## Авторы
+
+Viktor Shadrin - Backend Developer
+
+## Версии
+
+- v1.0.0 - Initial release с полным функционалом
