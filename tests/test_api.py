@@ -79,8 +79,12 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     @patch(
         "app.api.routes.PriceService.get_by_date",
         return_value=[
-            SimpleNamespace(ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000),
-            SimpleNamespace(ticker="btc_usd", price=Decimal("42010.00000000"), ts=1700000060),
+            SimpleNamespace(
+                ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000
+            ),
+            SimpleNamespace(
+                ticker="btc_usd", price=Decimal("42010.00000000"), ts=1700000060
+            ),
         ],
     )
     async def test_by_date_returns_list_when_range_is_valid(self, _mock_get_by_date):
@@ -103,8 +107,12 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
     @patch(
         "app.api.routes.PriceService.get_all",
         return_value=[
-            SimpleNamespace(ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000),
-            SimpleNamespace(ticker="btc_usd", price=Decimal("42010.00000000"), ts=1700000060),
+            SimpleNamespace(
+                ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000
+            ),
+            SimpleNamespace(
+                ticker="btc_usd", price=Decimal("42010.00000000"), ts=1700000060
+            ),
         ],
     )
     async def test_prices_returns_list(self, _mock_get_all):
@@ -141,7 +149,9 @@ class ApiTests(unittest.IsolatedAsyncioTestCase):
 
     @patch(
         "app.api.routes.PriceService.get_latest",
-        return_value=SimpleNamespace(ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000),
+        return_value=SimpleNamespace(
+            ticker="btc_usd", price=Decimal("42000.12345678"), ts=1700000000
+        ),
     )
     async def test_latest_returns_200_when_data_exists(self, _mock_get_latest):
         """GET /prices/latest возвращает 200 и объект цены, если данные существуют."""

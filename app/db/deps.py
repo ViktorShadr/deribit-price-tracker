@@ -11,10 +11,10 @@ SessionLocal = create_session_factory()
 
 def get_db() -> Generator[Session, None, None]:
     """
-        FastAPI dependency: предоставляет SQLAlchemy Session и гарантирует закрытие.
+    FastAPI dependency: предоставляет SQLAlchemy Session и гарантирует закрытие.
 
-        Используется через Depends(get_db) в роутерах.
-        """
+    Используется через Depends(get_db) в роутерах.
+    """
     db = SessionLocal()
     try:
         yield db
@@ -25,9 +25,9 @@ def get_db() -> Generator[Session, None, None]:
 @contextmanager
 def get_db_context():
     """
-        Контекстный менеджер для использования в Celery задачах.
-        Гарантирует правильное закрытие сессии.
-        """
+    Контекстный менеджер для использования в Celery задачах.
+    Гарантирует правильное закрытие сессии.
+    """
     db = SessionLocal()
     try:
         yield db

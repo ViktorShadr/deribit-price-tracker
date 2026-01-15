@@ -12,8 +12,7 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 
 # Настройка логирования
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -56,7 +55,8 @@ def get_settings() -> Settings:
         database_url=database_url,
         celery_broker_url=os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
         celery_backend_url=os.getenv("CELERY_BACKEND_URL", "redis://localhost:6379/1"),
-        deribit_base_url=os.getenv("DERIBIT_BASE_URL", "https://www.deribit.com/api/v2"),
+        deribit_base_url=os.getenv(
+            "DERIBIT_BASE_URL", "https://www.deribit.com/api/v2"
+        ),
         tickers=tickers,
     )
-

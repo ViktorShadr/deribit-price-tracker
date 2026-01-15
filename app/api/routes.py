@@ -10,14 +10,14 @@ router = APIRouter(prefix="/prices", tags=["prices"])
 
 @router.get("", response_model=list[PriceOut])
 def read_prices(
-    ticker: Ticker = Query(..., description="Тикер: btc_usd или eth_usd"), 
-    db: Session = Depends(get_db)
+    ticker: Ticker = Query(..., description="Тикер: btc_usd или eth_usd"),
+    db: Session = Depends(get_db),
 ):
     """
-        Получить все сохранённые значения цены для указанного тикера.
+    Получить все сохранённые значения цены для указанного тикера.
 
-        Query params:
-          - ticker: обязательный (btc_usd / eth_usd)
+    Query params:
+      - ticker: обязательный (btc_usd / eth_usd)
     """
     service = PriceService(db)
     return service.get_all(ticker.value)
@@ -25,8 +25,8 @@ def read_prices(
 
 @router.get("/latest", response_model=PriceOut)
 def read_latest_price(
-    ticker: Ticker = Query(..., description="Тикер: btc_usd или eth_usd"), 
-    db: Session = Depends(get_db)
+    ticker: Ticker = Query(..., description="Тикер: btc_usd или eth_usd"),
+    db: Session = Depends(get_db),
 ):
     """
     Получить последнюю (самую свежую) цену для указанного тикера.
@@ -48,9 +48,9 @@ def read_prices_by_date(
     db: Session = Depends(get_db),
 ):
     """
-        Получить цены по тикеру в диапазоне времени [from_ts, to_ts] (UNIX timestamp).
+    Получить цены по тикеру в диапазоне времени [from_ts, to_ts] (UNIX timestamp).
 
-        Возвращает 400, если from_ts > to_ts.
+    Возвращает 400, если from_ts > to_ts.
     """
     if from_ts > to_ts:
         raise HTTPException(status_code=400, detail="from_ts must be <= to_ts")

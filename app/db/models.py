@@ -28,6 +28,6 @@ class Price(Base):
         # Валидация тикеров на уровне БД
         CheckConstraint(
             f"ticker IN ({', '.join(repr(t) for t in VALID_TICKERS)})",
-            name="check_valid_ticker"
+            name="check_valid_ticker",
         ),
     )

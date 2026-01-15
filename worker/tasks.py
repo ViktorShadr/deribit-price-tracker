@@ -20,12 +20,12 @@ settings = get_settings()
 )
 def fetch_and_store_prices():
     """
-        Celery task: раз в минуту получает index price по тикерам и сохраняет в БД.
+    Celery task: раз в минуту получает index price по тикерам и сохраняет в БД.
 
-        Сохраняет:
-          - ticker
-          - price
-          - ts (UNIX timestamp, seconds)
+    Сохраняет:
+      - ticker
+      - price
+      - ts (UNIX timestamp, seconds)
     """
     ts = int(time.time())
     logger.info(f"Starting price fetch task at timestamp {ts}")
@@ -33,16 +33,18 @@ def fetch_and_store_prices():
     try:
         client = DeribitClient(base_url=settings.deribit_base_url)
         prices = client.get_index_prices(settings.tickers)
-        
+
         logger.info(f"Fetched prices: {prices}")
 
         # Используем контекстный менеджер для правильной работы с сессией
         with get_db_context() as session:
             saved_count = save_prices(session, prices, ts)
 
-        logger.info(f"Successfully saved {saved_count} prices out of {len(prices)} requested")
+        logger.info(
+            f"Successfully saved {saved_count} prices out of {len(prices)} requested"
+        )
         return {"ts": ts, "prices": prices, "saved_count": saved_count}
-        
+
     except DeribitError as e:
         logger.error(f"Deribit API error: {e}")
         raise  # Celery автоматически обработает retry

@@ -12,7 +12,7 @@ from app.db.models import Price
 def save_price(session: Session, ticker: str, price: Decimal, ts: int) -> bool:
     """
     Сохраняет цену в БД с обработкой дубликатов.
-    
+
     Returns:
         bool: True если сохранено, False если дубликат
     """
@@ -41,24 +41,18 @@ def save_prices(session: Session, prices: Mapping[str, Decimal], ts: int) -> int
 
 
 def get_prices(db: Session, ticker: str) -> list[Price]:
-    return (
-        db.query(Price)
-        .filter(Price.ticker == ticker)
-        .order_by(Price.ts.asc())
-        .all()
-    )
+    return db.query(Price).filter(Price.ticker == ticker).order_by(Price.ts.asc()).all()
 
 
 def get_latest_price(db: Session, ticker: str) -> Price | None:
     return (
-        db.query(Price)
-        .filter(Price.ticker == ticker)
-        .order_by(Price.ts.desc())
-        .first()
+        db.query(Price).filter(Price.ticker == ticker).order_by(Price.ts.desc()).first()
     )
 
 
-def get_prices_by_date(db: Session, ticker: str, from_ts: int, to_ts: int) -> list[Price]:
+def get_prices_by_date(
+    db: Session, ticker: str, from_ts: int, to_ts: int
+) -> list[Price]:
     return (
         db.query(Price)
         .filter(
