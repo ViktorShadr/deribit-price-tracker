@@ -30,3 +30,5 @@ def _build_celery_app() -> Celery:
 @lru_cache(maxsize=1)
 def get_celery_app() -> Celery:
     return _build_celery_app()
+
+celery_app = get_celery_app()
