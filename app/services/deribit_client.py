@@ -16,7 +16,7 @@ class DeribitClient:
     base_url: str = "https://www.deribit.com/api/v2"
     timeout_s: float = 10.0
 
-    def get_index_price(self, index_name: str) -> Decimal:
+    def _get_index_price(self, client: httpx.Client, index_name: str) -> Decimal:
         """
         Возвращает текущую index price для index_name (например, btc_usd / eth_usd).
         Deribit public endpoints не требуют авторизации.
@@ -25,8 +25,7 @@ class DeribitClient:
         params = {"index_name": index_name}
 
         try:
-            with httpx.Client(timeout=self.timeout_s) as client:
-                resp = client.get(url, params=params)
+            resp = client.get(url, params=params)
         except httpx.RequestError as exc:
             raise DeribitError(f"Request error: {exc}") from exc
 
@@ -47,9 +46,20 @@ class DeribitClient:
 
         return Decimal(str(result["index_price"]))
 
+    def get_index_price(self, index_name: str) -> Decimal:
+        """
+        Возвращает текущую index price для index_name (например, btc_usd / eth_usd).
+        Deribit public endpoints не требуют авторизации.
+        """
+        with httpx.Client(timeout=self.timeout_s) as client:
+            return self._get_index_price(client, index_name)
+
     def get_index_prices(self, index_names: Iterable[str]) -> dict[str, Decimal]:
         """
         Удобный метод: получить несколько индексов подряд.
         (Параллелить тут не нужно — 2 запроса/мин.)
         """
-        return {name: self.get_index_price(name) for name in index_names}
+        with httpx.Client(timeout=self.timeout_s) as client:
+            return {
+                name: self._get_index_price(client, name) for name in index_names
+            }

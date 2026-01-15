@@ -1,17 +1,17 @@
 import logging
 import time
 
+from celery import shared_task
+
 from app.core.config import get_settings
 from app.db.crud import save_prices
 from app.db.deps import get_db_context
 from app.services.deribit_client import DeribitClient, DeribitError
-from worker.celery_app import celery_app
 
 logger = logging.getLogger(__name__)
-settings = get_settings()
 
 
-@celery_app.task(
+@shared_task(
     name="worker.tasks.fetch_and_store_prices",
     autoretry_for=(DeribitError,),
     retry_kwargs={"max_retries": 5},
@@ -27,6 +27,7 @@ def fetch_and_store_prices():
       - price
       - ts (UNIX timestamp, seconds)
     """
+    settings = get_settings()
     ts = int(time.time())
     logger.info(f"Starting price fetch task at timestamp {ts}")
 

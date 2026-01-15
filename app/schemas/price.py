@@ -1,14 +1,7 @@
 from decimal import Decimal
-from enum import Enum
-
 from pydantic import BaseModel
 
-
-class Ticker(str, Enum):
-    """Валидные тикеры для API."""
-
-    BTC_USD = "btc_usd"
-    ETH_USD = "eth_usd"
+from app.core.tickers import Ticker
 
 
 class PriceOut(BaseModel):
@@ -20,12 +13,3 @@ class PriceOut(BaseModel):
 
     class Config:
         from_attributes = True
-
-
-class TickerQuery(BaseModel):
-    """Валидация query параметра ticker."""
-
-    ticker: Ticker
-
-    class Config:
-        extra = "forbid"  # Запрещаем дополнительные поля

@@ -127,17 +127,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 **Linux / macOS:**
 
 ```bash
-celery -A worker.celery_app worker --loglevel=info
+celery -A worker.celery_app:get_celery_app worker --loglevel=info
 ```
 
 **Windows:**
 
 ```bash
-celery -A worker.celery_app worker --loglevel=info --pool=solo
+celery -A worker.celery_app:get_celery_app worker --loglevel=info --pool=solo
 ```
 
 ```bash
-celery -A worker.celery_app beat --loglevel=info
+celery -A worker.celery_app:get_celery_app beat --loglevel=info
 ```
 
 ### Переменные окружения
@@ -368,7 +368,7 @@ docker-compose logs app
 docker-compose logs worker
 
 # Проверить статус Celery задач
-docker-compose exec worker celery -A worker.celery_app inspect active
+docker-compose exec worker celery -A worker.celery_app:get_celery_app inspect active
 ```
 
 3. **Проблемы с БД**

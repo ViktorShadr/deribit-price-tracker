@@ -8,6 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+from app.core.tickers import VALID_TICKERS
+
 BASE_DIR = Path(__file__).resolve().parents[2]
 
 # Настройка логирования
@@ -48,6 +50,13 @@ def get_settings() -> Settings:
     tickers = _parse_csv(tickers_raw)
     if not tickers:
         raise RuntimeError("TICKERS is empty. Example: TICKERS=btc_usd,eth_usd")
+    invalid_tickers = tuple(ticker for ticker in tickers if ticker not in VALID_TICKERS)
+    if invalid_tickers:
+        raise RuntimeError(
+            "TICKERS содержит неподдерживаемые значения: "
+            f"{', '.join(invalid_tickers)}. "
+            f"Допустимые: {', '.join(VALID_TICKERS)}"
+        )
 
     logger.info(f"Configuration loaded. Tickers: {tickers}")
 
