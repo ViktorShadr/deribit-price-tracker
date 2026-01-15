@@ -1,6 +1,6 @@
 # Deribit Price Tracker
 
-Сервис для отслеживания цен криптовалют BTC и USD с биржи Deribit. Собирает данные каждую минуту и предоставляет REST API для доступа к ним.
+Сервис для отслеживания цен криптовалют BTC и ETH с биржи Deribit. Собирает данные каждую минуту и предоставляет REST API для доступа к ним.
 
 ## Функциональность
 
@@ -53,6 +53,7 @@ cp .env.example .env
 ```bash
 docker-compose up -d
 ```
+> В compose запускаются API, Celery worker и Celery beat для периодического сбора данных.
 
 4. **Проверка работоспособности**
 ```bash
@@ -185,7 +186,7 @@ deribit-price-tracker/
 
 ## Технологический стек
 
-- **Backend**: FastAPI, Python 3.14
+- **Backend**: FastAPI, Python 3.12
 - **База данных**: PostgreSQL 16
 - **ORM**: SQLAlchemy 2.0
 - **Миграции**: Alembic

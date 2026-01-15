@@ -3,7 +3,7 @@ from __future__ import annotations
 from decimal import Decimal
 from typing import Mapping
 
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from app.db.models import Price
@@ -16,15 +16,13 @@ def save_price(session: Session, ticker: str, price: Decimal, ts: int) -> bool:
     Returns:
         bool: True если сохранено, False если дубликат
     """
-    try:
-        row = Price(ticker=ticker, price=price, ts=ts)
-        session.add(row)
-        session.flush()  # Проверяем constraints без коммита
-        return True
-    except IntegrityError:
-        # Дубликат (ticker, ts) уже существует
-        session.rollback()
-        return False
+    stmt = (
+        insert(Price)
+        .values(ticker=ticker, price=price, ts=ts)
+        .on_conflict_do_nothing(index_elements=["ticker", "ts"])
+    )
+    result = session.execute(stmt)
+    return result.rowcount == 1
 
 
 def save_prices(session: Session, prices: Mapping[str, Decimal], ts: int) -> int:
@@ -32,12 +30,15 @@ def save_prices(session: Session, prices: Mapping[str, Decimal], ts: int) -> int
     Сохраняет пачку цен за один timestamp с обработкой дубликатов.
     Возвращает количество успешно добавленных строк.
     """
-    saved_count = 0
-    for ticker, price in prices.items():
-        if save_price(session, ticker=ticker, price=price, ts=ts):
-            saved_count += 1
+    if not prices:
+        return 0
 
-    return saved_count
+    rows = [{"ticker": ticker, "price": price, "ts": ts} for ticker, price in prices.items()]
+    stmt = insert(Price).values(rows).on_conflict_do_nothing(
+        index_elements=["ticker", "ts"]
+    )
+    result = session.execute(stmt)
+    return result.rowcount or 0
 
 
 def get_prices(db: Session, ticker: str) -> list[Price]:

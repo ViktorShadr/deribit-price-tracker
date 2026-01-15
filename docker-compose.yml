@@ -73,5 +73,24 @@ services:
         celery -A worker.celery_app worker --loglevel=info
       "
 
+  beat:
+    build: .
+    environment:
+      DATABASE_URL: postgresql+psycopg2://deribit:${POSTGRES_PASSWORD:-change_me}@db:5432/deribit
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_BACKEND_URL: redis://redis:6379/1
+      DERIBIT_BASE_URL: ${DERIBIT_BASE_URL:-https://www.deribit.com/api/v2}
+      TICKERS: ${TICKERS:-btc_usd,eth_usd}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: >
+      sh -c "
+        echo 'Starting Celery beat...' &&
+        celery -A worker.celery_app beat --loglevel=info
+      "
+
 volumes:
   pg_data:

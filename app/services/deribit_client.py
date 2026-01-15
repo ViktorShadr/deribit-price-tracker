@@ -24,13 +24,19 @@ class DeribitClient:
         url = f"{self.base_url}/public/get_index_price"
         params = {"index_name": index_name}
 
-        with httpx.Client(timeout=self.timeout_s) as client:
-            resp = client.get(url, params=params)
+        try:
+            with httpx.Client(timeout=self.timeout_s) as client:
+                resp = client.get(url, params=params)
+        except httpx.RequestError as exc:
+            raise DeribitError(f"Request error: {exc}") from exc
 
         if resp.status_code != 200:
             raise DeribitError(f"HTTP {resp.status_code}: {resp.text}")
 
-        data = resp.json()
+        try:
+            data = resp.json()
+        except ValueError as exc:
+            raise DeribitError(f"Invalid JSON response: {exc}") from exc
 
         if "error" in data and data["error"]:
             raise DeribitError(f"Deribit error: {data['error']}")
